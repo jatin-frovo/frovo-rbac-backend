@@ -1,0 +1,27 @@
+const express = require('express');
+const {
+  getTransactions,
+  getTransactionSummary,
+  getPayouts,
+  createPayout,
+  updatePayoutStatus,
+  cashReconciliation,
+  getFinancialReports
+} = require('../controllers/financeController');
+const auth = require('../middleware/auth');
+const { checkPermission } = require('../middleware/rbac');
+
+const router = express.Router();
+
+// All routes require authentication
+router.use(auth);
+
+router.get('/transactions', checkPermission('finance', 'read'), getTransactions);
+router.get('/transactions/summary', checkPermission('finance', 'read'), getTransactionSummary);
+router.get('/payouts', checkPermission('finance', 'read'), getPayouts);
+router.post('/payouts', checkPermission('finance', 'create'), createPayout);
+router.put('/payouts/:id', checkPermission('finance', 'update'), updatePayoutStatus);
+router.post('/cash-reconciliation', checkPermission('finance', 'create'), cashReconciliation);
+router.get('/reports/:reportType', checkPermission('finance', 'read'), getFinancialReports);
+
+module.exports = router;
