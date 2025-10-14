@@ -39,7 +39,7 @@ app.use('/api/planograms', planogramRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/support', supportRoutes);
- app.use('/api/inventory', inventoryRoutes); // Comment out for now
+app.use('/api/inventory', inventoryRoutes); // Comment out for now
 app.use('/api/audit', auditRoutes); // Comment out for now
 app.use('/api/roles', roleRoutes); // Comment out for now
 
