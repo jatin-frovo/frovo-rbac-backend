@@ -20,7 +20,12 @@ const permissionSchema = new mongoose.Schema({
       'stock',
       'payouts',
       'settlements',
-      'dispatch'
+      'dispatch',
+      'products',        // ✅ ADDED
+      'orders',          // ✅ ADDED
+      'payments',        // ✅ ADDED
+      'profile',         // ✅ ADDED
+      'transactions'     // ✅ ADDED
     ]
   },
   actions: [{
@@ -38,7 +43,7 @@ const roleSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    enum: ['super_admin', 'operations_manager', 'field_refill_agent', 'maintenance_lead', 'finance_team', 'support_agent', 'warehouse_manager', 'auditor']
+    enum: ['super_admin', 'operations_manager', 'field_refill_agent', 'maintenance_lead', 'finance_team', 'support_agent', 'warehouse_manager', 'auditor', 'customer']
   },
   description: {
     type: String,
@@ -47,7 +52,7 @@ const roleSchema = new mongoose.Schema({
   permissions: [permissionSchema],
   systemInterface: [{
     type: String,
-    enum: ['admin_panel', 'mobile_app', 'field_app', 'technician_app', 'finance_dashboard', 'support_dashboard', 'warehouse_portal']
+    enum: ['admin_panel', 'mobile_app', 'field_app', 'technician_app', 'finance_dashboard', 'support_dashboard', 'warehouse_portal', 'web_portal']
   }],
   isActive: {
     type: Boolean,

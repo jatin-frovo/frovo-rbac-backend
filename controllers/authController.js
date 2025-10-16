@@ -13,6 +13,10 @@ const rolesConfig = {
         actions: ['create', 'read', 'update', 'delete', 'manage']
       },
       {
+        resource: 'roles',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
         resource: 'machines',
         actions: ['create', 'read', 'update', 'delete', 'manage']
       },
@@ -47,6 +51,14 @@ const rolesConfig = {
       {
         resource: 'reports',
         actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'products',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'orders',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
       }
     ]
   },
@@ -77,6 +89,14 @@ const rolesConfig = {
       {
         resource: 'users',
         actions: ['read', 'update']
+      },
+      {
+        resource: 'products',
+        actions: ['read', 'update']
+      },
+      {
+        resource: 'orders',
+        actions: ['read']
       }
     ]
   },
@@ -135,6 +155,10 @@ const rolesConfig = {
       {
         resource: 'reports',
         actions: ['read']
+      },
+      {
+        resource: 'transactions',
+        actions: ['read', 'manage']
       }
     ]
   },
@@ -148,6 +172,14 @@ const rolesConfig = {
       },
       {
         resource: 'users',
+        actions: ['read']
+      },
+      {
+        resource: 'orders',
+        actions: ['read']
+      },
+      {
+        resource: 'transactions',
         actions: ['read']
       }
     ]
@@ -167,6 +199,10 @@ const rolesConfig = {
       {
         resource: 'dispatch',
         actions: ['create', 'read', 'update', 'manage']
+      },
+      {
+        resource: 'products',
+        actions: ['create', 'read', 'update', 'manage']
       }
     ]
   },
@@ -185,6 +221,41 @@ const rolesConfig = {
       {
         resource: 'finance',
         actions: ['read']
+      },
+      {
+        resource: 'transactions',
+        actions: ['read']
+      }
+    ]
+  },
+  // ✅ ADDED CUSTOMER ROLE
+  customer: {
+    description: 'End customer who buys products from vending machines',
+    systemInterface: ['mobile_app', 'web_portal'],
+    permissions: [
+      {
+        resource: 'products',
+        actions: ['read']
+      },
+      {
+        resource: 'machines',
+        actions: ['read']
+      },
+      {
+        resource: 'transactions',
+        actions: ['create', 'read']
+      },
+      {
+        resource: 'orders',
+        actions: ['create', 'read', 'update']
+      },
+      {
+        resource: 'payments',
+        actions: ['create', 'read']
+      },
+      {
+        resource: 'profile',
+        actions: ['read', 'update']
       }
     ]
   }
@@ -207,7 +278,8 @@ const initializeRoles = async () => {
         const validResources = [
           'users', 'machines', 'planograms', 'refills', 'maintenance', 
           'finance', 'support', 'inventory', 'audit', 'reports',
-          'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch'
+          'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch',
+          'products', 'orders', 'payments', 'profile', 'transactions'
         ];
         
         if (!validResources.includes(permission.resource)) {
@@ -253,13 +325,15 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // ✅ FIX: Set default role to 'customer' if not provided or invalid
+    let userRole = role || 'customer';
+    
     // Verify role exists
-    const roleExists = await Role.findOne({ name: role });
+    const roleExists = await Role.findOne({ name: userRole });
     if (!roleExists) {
-      const availableRoles = await Role.find().select('name');
-      return res.status(400).json({ 
-        message: `Invalid role: ${role}. Available roles: ${availableRoles.map(r => r.name).join(', ')}` 
-      });
+      // If role doesn't exist, default to customer
+      userRole = 'customer';
+      console.log(`Role ${role} not found, defaulting to customer`);
     }
 
     // Create user
@@ -267,7 +341,7 @@ const register = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'field_refill_agent'
+      role: userRole
     });
 
     await user.save();

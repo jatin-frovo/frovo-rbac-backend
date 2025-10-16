@@ -3,46 +3,48 @@ const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
-  },
-  sku: {
-    type: String,
     required: true,
-    unique: true
+    trim: true
   },
-  category: {
+  description: {
     type: String,
-    required: true
+    trim: true
   },
   price: {
     type: Number,
-    required: true
+    required: true,
+    min: 0
   },
-  cost: {
-    type: Number,
-    required: true
+  category: {
+    type: String,
+    required: true,
+    enum: ['beverages', 'snacks', 'chocolates', 'health', 'other']
   },
-  currentStock: {
+  image: {
+    type: String
+  },
+  nutritionalInfo: {
+    calories: Number,
+    protein: Number,
+    carbs: Number,
+    fat: Number
+  },
+  isAvailable: {
+    type: Boolean,
+    default: true
+  },
+  stockQuantity: {
     type: Number,
     default: 0
   },
-  minStockLevel: {
-    type: Number,
-    default: 10
+  sku: {
+    type: String,
+    unique: true,
+    trim: true
   },
-  maxStockLevel: {
-    type: Number,
-    default: 100
-  },
-  supplier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier'
-  },
-  barcode: String,
-  description: String,
-  isActive: {
-    type: Boolean,
-    default: true
+  brand: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

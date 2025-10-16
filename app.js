@@ -18,6 +18,8 @@ const supportRoutes = require('./routes/support');
 const inventoryRoutes = require('./routes/inventory'); // Comment out for now
 const auditRoutes = require('./routes/audit'); // Comment out for now
  const roleRoutes = require('./routes/roles'); // Comment out for now
+ const customerRoutes = require('./routes/customer');
+ const productRoutes = require('./routes/products');
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.use('/api/support', supportRoutes);
 app.use('/api/inventory', inventoryRoutes); // Comment out for now
 app.use('/api/audit', auditRoutes); // Comment out for now
 app.use('/api/roles', roleRoutes); // Comment out for now
+app.use('/api/customer', customerRoutes);
+app.use('/api/products', productRoutes);
 
 // Database connection
 dbConnect().then(() => {

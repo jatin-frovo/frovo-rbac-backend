@@ -21,7 +21,7 @@ const rolesConfig = {
       },
       {
         resource: 'refills',
-        actions: ['create', 'read', 'update', 'delete', 'manage']
+        actions: ['create', 'read', 'update', 'delete', 'manage','assign']
       },
       {
         resource: 'maintenance',
@@ -197,7 +197,40 @@ const rolesConfig = {
         actions: ['read']
       }
     ]
+  },
+
+  // ✅ ADD CUSTOMER ROLE RIGHT HERE - AFTER AUDITOR AND BEFORE THE CLOSING BRACE
+  customer: {
+    description: 'End customer who buys products from vending machines',
+    systemInterface: ['mobile_app', 'web_portal'],
+    permissions: [
+      {
+        resource: 'products',
+        actions: ['read']
+      },
+      {
+        resource: 'machines',
+        actions: ['read']
+      },
+      {
+        resource: 'transactions',
+        actions: ['create', 'read']
+      },
+      {
+        resource: 'orders',
+        actions: ['create', 'read', 'update']
+      },
+      {
+        resource: 'payments',
+        actions: ['create', 'read']
+      },
+      {
+        resource: 'profile',
+        actions: ['read', 'update']
+      }
+    ]
   }
+  // Make sure there's no comma after the customer role if it's the last one
 };
 
 module.exports = rolesConfig;
