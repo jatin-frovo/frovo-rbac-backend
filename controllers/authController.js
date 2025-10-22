@@ -314,7 +314,6 @@ const initializeRoles = async () => {
     console.error('Full error:', error);
   }
 };
-
 const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -421,4 +420,45 @@ const getProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, initializeRoles };
+// ADD THIS FUNCTION
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
+    });
+  }
+};
+module.exports = { register, login, getProfile, initializeRoles, changePassword };

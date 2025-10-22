@@ -9,6 +9,13 @@ const {
 } = require('../controllers/refillController');
 const auth = require('../middleware/auth');
 const { checkPermission } = require('../middleware/rbac');
+const { 
+  createRefillJobValidator,
+  updateRefillJobValidator,
+  refillJobIdValidator,
+  userAgentIdValidator, // ✅ Changed from userIdValidator to userAgentIdValidator
+  handleValidationErrors 
+} = require('../validators');
 
 const router = express.Router();
 
@@ -16,12 +23,12 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/', checkPermission('refills', 'read'), getRefillJobs);
-router.get('/:id', checkPermission('refills', 'read'), getRefillJobById);
-router.post('/', checkPermission('refills', 'create'), createRefillJob);
-router.put('/:id/status', checkPermission('refills', 'update'), updateRefillJobStatus);
-router.patch('/:id/assign', checkPermission('refills', 'assign'), assignRefillJob);
+router.get('/:id', refillJobIdValidator, handleValidationErrors, checkPermission('refills', 'read'), getRefillJobById);
+router.post('/', createRefillJobValidator, handleValidationErrors, checkPermission('refills', 'create'), createRefillJob);
+router.put('/:id/status', refillJobIdValidator, handleValidationErrors, updateRefillJobValidator, handleValidationErrors, checkPermission('refills', 'update'), updateRefillJobStatus);
+router.patch('/:id/assign', refillJobIdValidator, handleValidationErrors, checkPermission('refills', 'assign'), assignRefillJob);
 
-// SIMPLE: Just use required parameter
-router.get('/agent/:agentId', checkPermission('refills', 'read'), getRefillJobsByAgent);
+// ✅ FIXED: Use userAgentIdValidator instead of userIdValidator
+router.get('/agent/:agentId', userAgentIdValidator, handleValidationErrors, checkPermission('refills', 'read'), getRefillJobsByAgent);
 
 module.exports = router;

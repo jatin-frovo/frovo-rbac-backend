@@ -10,6 +10,12 @@ const {
 } = require('../controllers/inventoryController');
 const auth = require('../middleware/auth');
 const { checkPermission } = require('../middleware/rbac');
+const { 
+  createProductValidator,
+  productIdValidator,
+  updateStockValidator,
+  handleValidationErrors 
+} = require('../validators');
 
 const router = express.Router();
 
@@ -17,10 +23,10 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/', checkPermission('inventory', 'read'), getInventory);
-router.get('/products/:id', checkPermission('inventory', 'read'), getProductById);
-router.post('/products', checkPermission('inventory', 'create'), addProduct);
-router.put('/products/:id', checkPermission('inventory', 'update'), updateProduct);
-router.patch('/products/:id/stock', checkPermission('inventory', 'update'), updateStock);
+router.get('/products/:id', productIdValidator, handleValidationErrors, checkPermission('inventory', 'read'), getProductById);
+router.post('/products', createProductValidator, handleValidationErrors, checkPermission('inventory', 'create'), addProduct);
+router.put('/products/:id', productIdValidator, handleValidationErrors, checkPermission('inventory', 'update'), updateProduct);
+router.patch('/products/:id/stock', updateStockValidator, handleValidationErrors, checkPermission('inventory', 'update'), updateStock);
 router.get('/alerts/low-stock', checkPermission('inventory', 'read'), getLowStockAlerts);
 router.get('/reports/stock', checkPermission('inventory', 'read'), getInventoryReports);
 

@@ -7,6 +7,10 @@ const {
 } = require('../controllers/roleController');
 const auth = require('../middleware/auth');
 const { checkPermission } = require('../middleware/rbac');
+const { 
+  roleIdValidator,
+  handleValidationErrors 
+} = require('../validators');
 
 const router = express.Router();
 
@@ -15,8 +19,8 @@ router.use(auth);
 
 // Only Super Admin can manage roles
 router.get('/', checkPermission('roles', 'read'), getAllRoles);
-router.get('/:id', checkPermission('roles', 'read'), getRoleById);
-router.put('/:id', checkPermission('roles', 'update'), updateRole);
-router.get('/:id/permissions', checkPermission('roles', 'read'), getRolePermissions);
+router.get('/:id', roleIdValidator, handleValidationErrors, checkPermission('roles', 'read'), getRoleById);
+router.put('/:id', roleIdValidator, handleValidationErrors, checkPermission('roles', 'update'), updateRole);
+router.get('/:id/permissions', roleIdValidator, handleValidationErrors, checkPermission('roles', 'read'), getRolePermissions);
 
 module.exports = router;

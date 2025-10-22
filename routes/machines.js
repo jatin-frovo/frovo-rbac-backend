@@ -7,15 +7,22 @@ const {
 } = require('../controllers/machineController');
 const auth = require('../middleware/auth');
 const { checkPermission, checkAssignedMachine } = require('../middleware/rbac');
+const { 
+  createMachineValidator,
+  updateMachineValidator,
+  machineIdValidator,
+  machineQueryValidator,
+  handleValidationErrors 
+} = require('../validators');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(auth);
 
-router.get('/', checkPermission('machines', 'read'), getMachines);
-router.get('/:id', checkPermission('machines', 'read'), checkAssignedMachine, getMachineById);
-router.post('/', checkPermission('machines', 'create'), createMachine);
-router.put('/:id', checkPermission('machines', 'update'), checkAssignedMachine, updateMachine);
+router.get('/', machineQueryValidator, handleValidationErrors, checkPermission('machines', 'read'), getMachines);
+router.get('/:id', machineIdValidator, handleValidationErrors, checkPermission('machines', 'read'), checkAssignedMachine, getMachineById);
+router.post('/', createMachineValidator, handleValidationErrors, checkPermission('machines', 'create'), createMachine);
+router.put('/:id', machineIdValidator, handleValidationErrors, updateMachineValidator, handleValidationErrors, checkPermission('machines', 'update'), checkAssignedMachine, updateMachine);
 
 module.exports = router;

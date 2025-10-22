@@ -10,6 +10,8 @@ const supportRoutes = require('./support');
 const auditRoutes = require('./audit');
 const roleRoutes = require('./roles');
 const inventoryRoutes = require('./inventory');
+const customerRoutes = require('./customer'); // Added customer routes
+const productRoutes = require('./products');  // Added product routes
 
 const router = express.Router();
 
@@ -24,6 +26,8 @@ router.use('/support', supportRoutes);
 router.use('/audit', auditRoutes);
 router.use('/roles', roleRoutes);
 router.use('/inventory', inventoryRoutes);
+router.use('/customer', customerRoutes); // Added customer routes
+router.use('/products', productRoutes);  // Added product routes
 
 // Health check route
 router.get('/health', (req, res) => {
