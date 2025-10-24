@@ -7,40 +7,36 @@ const auditLogIdValidator = [
 ];
 
 const auditQueryValidator = [
-  query('startDate')
-    .optional()
-    .isISO8601()
-    .withMessage('Start date must be a valid date'),
-  
-  query('endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('End date must be a valid date'),
-  
-  query('action')
-    .optional()
-    .isLength({ min: 1 })
-    .withMessage('Action filter cannot be empty'),
-  
-  query('userId')
-    .optional()
-    .isMongoId()
-    .withMessage('Invalid user ID'),
-  
-  query('resource')
-    .optional()
-    .isLength({ min: 1 })
-    .withMessage('Resource filter cannot be empty'),
-  
   query('page')
     .optional()
     .isInt({ min: 1 })
     .withMessage('Page must be a positive integer'),
-  
   query('limit')
     .optional()
     .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1-100')
+    .withMessage('Limit must be between 1 and 100'),
+  query('action')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Action must be less than 50 characters')
+    .trim(),
+  query('resource')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Resource must be less than 50 characters')
+    .trim(),
+  query('userId')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid user ID'),
+  query('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid start date'),
+  query('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid end date')
 ];
 
 module.exports = {

@@ -5,32 +5,16 @@ const permissionSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'users', 
-      'machines', 
-      'planograms', 
-      'refills', 
-      'maintenance', 
-      'finance', 
-      'support', 
-      'inventory', 
-      'audit', 
-      'reports',
-      'catalogue',
-      'alerts',
-      'stock',
-      'payouts',
-      'settlements',
-      'dispatch',
-      'products',        // ✅ ADDED
-      'orders',          // ✅ ADDED
-      'payments',        // ✅ ADDED
-      'profile',         // ✅ ADDED
-      'transactions'     // ✅ ADDED
+      'users', 'machines', 'planograms', 'refills', 'maintenance', 
+      'finance', 'support', 'inventory', 'audit', 'reports',
+      'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch',
+      'products', 'orders', 'payments', 'profile', 'transactions',
+      'departments', 'partners', 'security', 'access_requests'
     ]
   },
   actions: [{
     type: String,
-    enum: ['create', 'read', 'update', 'delete', 'manage', 'assign', 'approve']
+    enum: ['create', 'read', 'update', 'delete', 'manage', 'assign', 'approve', 'export']
   }],
   conditions: {
     type: Map,
@@ -54,9 +38,30 @@ const roleSchema = new mongoose.Schema({
     type: String,
     enum: ['admin_panel', 'mobile_app', 'field_app', 'technician_app', 'finance_dashboard', 'support_dashboard', 'warehouse_portal', 'web_portal']
   }],
+  scope: {
+    type: String,
+    enum: ['global', 'partner', 'region', 'machine'],
+    default: 'global'
+  },
+  assignedEntities: [{
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: 'scope'
+  }],
+  department: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Department'
+  },
+  isSystem: {
+    type: Boolean,
+    default: false
+  },
   isActive: {
     type: Boolean,
     default: true
+  },
+  version: {
+    type: Number,
+    default: 1
   }
 }, {
   timestamps: true

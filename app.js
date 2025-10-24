@@ -27,6 +27,16 @@ const supportRoutes = require('./routes/support');
 const customerRoutes = require('./routes/customer');
 const productRoutes = require('./routes/products');
 const rateLimitRoutes = require('./routes/rateLimit');
+const auditRoutes = require('./routes/audit');
+const roleRoutes = require('./routes/roles');
+const inventoryRoutes = require('./routes/inventory');
+
+// Import NEW routes
+const departmentRoutes = require('./routes/departments');
+const accessRequestRoutes = require('./routes/accessRequests');
+const securityRoutes = require('./routes/security');
+const partnerRoutes = require('./routes/partners');
+const invitationRoutes = require('./routes/invitations');
 
 const app = express();
 
@@ -41,6 +51,8 @@ app.use(apiLimiter);
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Frovo Backend API is running!',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
     rateLimit: {
       windowMs: process.env.RATE_LIMIT_WINDOW_MS || 60000,
       maxRequests: process.env.RATE_LIMIT_MAX_REQUESTS || 100
@@ -55,7 +67,7 @@ app.use('/api/customer/orders', orderLimiter);
 app.use('/api/finance/payments', paymentLimiter);
 app.use('/api/rate-limit', rateLimitRoutes);
 
-// Register routes
+// Register EXISTING routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/machines', machineRoutes);
@@ -66,6 +78,16 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/inventory', inventoryRoutes);
+
+// Register NEW routes
+app.use('/api/departments', departmentRoutes);
+app.use('/api/access-requests', accessRequestRoutes);
+app.use('/api/security', securityRoutes);
+app.use('/api/partners', partnerRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // Database connection
 dbConnect().then(() => {
@@ -108,4 +130,10 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API available at http://localhost:${PORT}/api`);
   console.log(`Rate limiting: ${process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests per ${process.env.RATE_LIMIT_WINDOW_MS || 60000}ms`);
+  console.log(`🚀 New Features Added:`);
+  console.log(`   📂 Departments Management`);
+  console.log(`   🔐 Access Request Workflow`);
+  console.log(`   🛡️ Security Settings`);
+  console.log(`   🤝 Partners Management`);
+  console.log(`   📧 User Invitations`);
 });

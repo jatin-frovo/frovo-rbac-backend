@@ -9,7 +9,17 @@ const maintenanceValidators = require('./maintenance.validators');
 const financeValidators = require('./finance.validators');
 const supportValidators = require('./support.validators');
 const customerValidators = require('./customer.validators');
-const auditValidators = require('./audit.validators'); // Added audit validators
+const auditValidators = require('./audit.validators');
+const roleValidators = require('./role.validators');
+const inventoryValidators = require('./inventory.validators');
+
+// New validators
+const departmentValidators = require('./department.validators');
+const accessRequestValidators = require('./accessRequest.validators');
+const securityValidators = require('./security.validators');
+const partnerValidators = require('./partner.validators');
+const invitationValidators = require('./invitation.validators');
+
 const { handleValidationErrors } = require('./validationMiddleware');
 
 module.exports = {
@@ -23,6 +33,13 @@ module.exports = {
   ...financeValidators,
   ...supportValidators,
   ...customerValidators,
-  ...auditValidators, // Added audit validators
+  ...auditValidators,
+  ...roleValidators,
+  ...inventoryValidators,
+  ...departmentValidators,
+  ...accessRequestValidators,
+  ...securityValidators,
+  ...partnerValidators,
+  ...invitationValidators,
   handleValidationErrors
 };
