@@ -46,6 +46,31 @@ const rolesConfig = {
       {
         resource: 'reports',
         actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      // ✅ ADDED NEW RESOURCES FOR SUPER ADMIN
+      {
+        resource: 'departments',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'partners',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'security',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'access_requests',
+        actions: ['create', 'read', 'update', 'delete', 'manage', 'approve']
+      },
+      {
+        resource: 'products',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'orders',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
       }
     ]
   },
@@ -199,7 +224,7 @@ const rolesConfig = {
     ]
   },
 
-  // ✅ ADD CUSTOMER ROLE RIGHT HERE - AFTER AUDITOR AND BEFORE THE CLOSING BRACE
+  // ✅ CUSTOMER ROLE
   customer: {
     description: 'End customer who buys products from vending machines',
     systemInterface: ['mobile_app', 'web_portal'],
@@ -230,7 +255,6 @@ const rolesConfig = {
       }
     ]
   }
-  // Make sure there's no comma after the customer role if it's the last one
 };
 
 module.exports = rolesConfig;

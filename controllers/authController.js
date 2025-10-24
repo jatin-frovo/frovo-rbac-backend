@@ -59,6 +59,23 @@ const rolesConfig = {
       {
         resource: 'orders',
         actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      // ✅ ADDED NEW RESOURCES FOR SUPER ADMIN
+      {
+        resource: 'departments',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'partners',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'security',
+        actions: ['create', 'read', 'update', 'delete', 'manage']
+      },
+      {
+        resource: 'access_requests',
+        actions: ['create', 'read', 'update', 'delete', 'manage', 'approve']
       }
     ]
   },
@@ -279,7 +296,9 @@ const initializeRoles = async () => {
           'users', 'machines', 'planograms', 'refills', 'maintenance', 
           'finance', 'support', 'inventory', 'audit', 'reports',
           'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch',
-          'products', 'orders', 'payments', 'profile', 'transactions'
+          'products', 'orders', 'payments', 'profile', 'transactions',
+          // ✅ ADDED NEW RESOURCES
+          'departments', 'partners', 'security', 'access_requests'
         ];
         
         if (!validResources.includes(permission.resource)) {
@@ -314,6 +333,24 @@ const initializeRoles = async () => {
     console.error('Full error:', error);
   }
 };
+
+// Add this function to reinitialize roles
+const reinitializeRoles = async (req, res) => {
+  try {
+    await initializeRoles();
+    res.json({
+      success: true,
+      message: 'Roles reinitialized successfully with updated permissions'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error reinitializing roles',
+      error: error.message
+    });
+  }
+};
+
 const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -461,4 +498,12 @@ const changePassword = async (req, res) => {
     });
   }
 };
-module.exports = { register, login, getProfile, initializeRoles, changePassword };
+
+module.exports = { 
+  register, 
+  login, 
+  getProfile, 
+  initializeRoles, 
+  changePassword,
+  reinitializeRoles 
+};
