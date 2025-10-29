@@ -37,6 +37,7 @@ const accessRequestRoutes = require('./routes/accessRequests');
 const securityRoutes = require('./routes/security');
 const partnerRoutes = require('./routes/partners');
 const invitationRoutes = require('./routes/invitations');
+const roleManagementRoutes = require('./routes/roleManagement');
 
 const app = express();
 
@@ -67,7 +68,7 @@ app.use('/api/customer/orders', orderLimiter);
 app.use('/api/finance/payments', paymentLimiter);
 app.use('/api/rate-limit', rateLimitRoutes);
 
-// Register EXISTING routes
+// Register routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/machines', machineRoutes);
@@ -81,13 +82,12 @@ app.use('/api/products', productRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/inventory', inventoryRoutes);
-
-// Register NEW routes
 app.use('/api/departments', departmentRoutes);
 app.use('/api/access-requests', accessRequestRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/role-management', roleManagementRoutes);
 
 // Database connection
 dbConnect().then(() => {
@@ -101,7 +101,6 @@ dbConnect().then(() => {
 app.use((error, req, res, next) => {
   console.error('Error:', error);
   
-  // Handle rate limit errors specifically
   if (error.status === 429) {
     return res.status(429).json({
       success: false,
@@ -129,11 +128,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API available at http://localhost:${PORT}/api`);
-  console.log(`Rate limiting: ${process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests per ${process.env.RATE_LIMIT_WINDOW_MS || 60000}ms`);
-  console.log(`🚀 New Features Added:`);
-  console.log(`   📂 Departments Management`);
-  console.log(`   🔐 Access Request Workflow`);
-  console.log(`   🛡️ Security Settings`);
-  console.log(`   🤝 Partners Management`);
-  console.log(`   📧 User Invitations`);
 });

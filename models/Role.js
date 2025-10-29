@@ -5,7 +5,7 @@ const permissionSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'users', 'machines', 'planograms', 'refills', 'maintenance', 
+      'users', 'roles', 'machines', 'planograms', 'refills', 'maintenance', 
       'finance', 'support', 'inventory', 'audit', 'reports',
       'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch',
       'products', 'orders', 'payments', 'profile', 'transactions',
@@ -14,7 +14,7 @@ const permissionSchema = new mongoose.Schema({
   },
   actions: [{
     type: String,
-    enum: ['create', 'read', 'update', 'delete', 'manage', 'assign', 'approve', 'export']
+    enum: ['create', 'read', 'update', 'delete', 'manage', 'assign', 'approve']
   }],
   conditions: {
     type: Map,
@@ -27,7 +27,25 @@ const roleSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    enum: ['super_admin', 'operations_manager', 'field_refill_agent', 'maintenance_lead', 'finance_team', 'support_agent', 'warehouse_manager', 'auditor', 'customer']
+    validate: {
+      validator: function(v) {
+        // Allow predefined roles AND custom roles that match the pattern
+        const predefinedRoles = [
+          'super_admin', 'operations_manager', 'field_refill_agent', 
+          'maintenance_lead', 'finance_team', 'support_agent', 
+          'warehouse_manager', 'auditor', 'customer'
+        ];
+        
+        // If it's a predefined role, allow it
+        if (predefinedRoles.includes(v)) {
+          return true;
+        }
+        
+        // If it's a custom role, validate the pattern
+        return /^[a-z_]+$/.test(v);
+      },
+      message: 'Role name must be either a predefined role or contain only lowercase letters and underscores'
+    }
   },
   description: {
     type: String,

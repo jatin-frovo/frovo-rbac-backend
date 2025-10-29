@@ -290,29 +290,14 @@ const initializeRoles = async () => {
     for (const [roleName, roleConfig] of Object.entries(rolesConfig)) {
       console.log(`Creating role ${roleName}...`);
       
-      // Validate permissions before saving
-      const validPermissions = roleConfig.permissions.filter(permission => {
-        const validResources = [
-          'users', 'machines', 'planograms', 'refills', 'maintenance', 
-          'finance', 'support', 'inventory', 'audit', 'reports',
-          'catalogue', 'alerts', 'stock', 'payouts', 'settlements', 'dispatch',
-          'products', 'orders', 'payments', 'profile', 'transactions',
-          // ✅ ADDED NEW RESOURCES
-          'departments', 'partners', 'security', 'access_requests'
-        ];
-        
-        if (!validResources.includes(permission.resource)) {
-          console.warn(`Skipping invalid resource: ${permission.resource} for role ${roleName}`);
-          return false;
-        }
-        return true;
-      });
-
+      // ✅ REMOVED THE VALIDATION FILTER - Use permissions directly
       const role = new Role({
         name: roleName,
         description: roleConfig.description,
-        permissions: validPermissions,
-        systemInterface: roleConfig.systemInterface
+        permissions: roleConfig.permissions, // Use permissions directly without filtering
+        systemInterface: roleConfig.systemInterface,
+        isSystem: true,
+        isActive: true
       });
       
       await role.save();

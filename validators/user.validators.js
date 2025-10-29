@@ -1,4 +1,5 @@
 const { body, param } = require('express-validator');
+const Role = require('../models/Role'); // Import Role model
 
 const createUserValidator = [
   body('name')
@@ -11,13 +12,28 @@ const createUserValidator = [
     .normalizeEmail(),
   
   body('role')
-    .isIn(['super_admin', 'operations_manager', 'field_refill_agent', 'maintenance_lead', 'finance_team', 'support_agent', 'warehouse_manager', 'auditor', 'customer'])
-    .withMessage('Invalid role specified'),
+    .custom(async (role) => {
+      // Check if role exists and is active in the database
+      const roleExists = await Role.findOne({ 
+        name: role,
+        isActive: true 
+      });
+      
+      if (!roleExists) {
+        throw new Error('Invalid role specified');
+      }
+      return true;
+    }),
   
   body('phone')
     .optional()
-    .isMobilePhone()
+    .isMobilePhone('any') // More flexible phone validation
     .withMessage('Please provide a valid phone number'),
+  
+  body('department')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid department ID'),
   
   body('assignedRegions')
     .optional()
@@ -25,6 +41,7 @@ const createUserValidator = [
     .withMessage('Assigned regions must be an array'),
   
   body('assignedRegions.*')
+    .optional()
     .isLength({ min: 1 })
     .withMessage('Region cannot be empty'),
   
@@ -34,6 +51,7 @@ const createUserValidator = [
     .withMessage('Assigned machines must be an array'),
   
   body('assignedMachines.*')
+    .optional()
     .isMongoId()
     .withMessage('Invalid machine ID'),
   
@@ -60,8 +78,29 @@ const updateUserValidator = [
   
   body('phone')
     .optional()
-    .isMobilePhone()
+    .isMobilePhone('any')
     .withMessage('Please provide a valid phone number'),
+  
+  body('role')
+    .optional()
+    .custom(async (role) => {
+      if (role) {
+        const roleExists = await Role.findOne({ 
+          name: role,
+          isActive: true 
+        });
+        
+        if (!roleExists) {
+          throw new Error('Invalid role specified');
+        }
+      }
+      return true;
+    }),
+  
+  body('department')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid department ID'),
   
   body('assignedRegions')
     .optional()
@@ -77,6 +116,33 @@ const updateUserValidator = [
     .optional()
     .isBoolean()
     .withMessage('isActive must be a boolean')
+];
+
+const updateUserRoleAndDepartmentValidator = [
+  param('id')
+    .isMongoId()
+    .withMessage('Invalid user ID'),
+  
+  body('role')
+    .optional()
+    .custom(async (role) => {
+      if (role) {
+        const roleExists = await Role.findOne({ 
+          name: role,
+          isActive: true 
+        });
+        
+        if (!roleExists) {
+          throw new Error('Invalid role specified');
+        }
+      }
+      return true;
+    }),
+  
+  body('department')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid department ID')
 ];
 
 const userIdValidator = [
@@ -100,6 +166,7 @@ const roleIdValidator = [
 module.exports = {
   createUserValidator,
   updateUserValidator,
+  updateUserRoleAndDepartmentValidator,
   userIdValidator,
   userAgentIdValidator,
   roleIdValidator

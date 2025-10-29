@@ -4,9 +4,11 @@ const router = express.Router();
 // Import controllers
 const {
   getAllRoles,
+  createCustomRole,
+  updateRolePermissions,
   getRoleById,
-  updateRole,
-  getRolePermissions
+  deleteRole,
+  getPermissionsTemplate
 } = require('../controllers/roleController');
 
 // Import middleware
@@ -15,7 +17,9 @@ const { checkPermission } = require('../middleware/rbac');
 
 // Import validators
 const { 
+  createRoleValidator,
   roleIdValidator,
+  updatePermissionsValidator,
   handleValidationErrors 
 } = require('../validators');
 
@@ -25,25 +29,37 @@ router.use(auth);
 // Route definitions
 router.get('/', checkPermission('roles', 'read'), getAllRoles);
 
+router.post('/custom', 
+  checkPermission('roles', 'create'), 
+  createRoleValidator, 
+  handleValidationErrors, 
+  createCustomRole
+);
+
+router.get('/permissions-template', 
+  checkPermission('roles', 'read'), 
+  getPermissionsTemplate
+);
+
 router.get('/:id', 
+  checkPermission('roles', 'read'), 
   roleIdValidator, 
   handleValidationErrors, 
-  checkPermission('roles', 'read'), 
   getRoleById
 );
 
-router.put('/:id', 
-  roleIdValidator, 
-  handleValidationErrors, 
+router.put('/:id/permissions', 
   checkPermission('roles', 'update'), 
-  updateRole
+  updatePermissionsValidator, 
+  handleValidationErrors, 
+  updateRolePermissions
 );
 
-router.get('/:id/permissions', 
+router.delete('/:id', 
+  checkPermission('roles', 'delete'), 
   roleIdValidator, 
   handleValidationErrors, 
-  checkPermission('roles', 'read'), 
-  getRolePermissions
+  deleteRole
 );
 
 module.exports = router;

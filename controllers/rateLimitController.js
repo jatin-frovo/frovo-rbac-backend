@@ -10,22 +10,22 @@ const getRateLimitStatus = (req, res) => {
       specificLimits: {
         auth: {
           windowMs: 15 * 60 * 1000,
-          maxRequests: 5,
+          maxRequests: 50,
           description: 'Login attempts per 15 minutes'
         },
         registration: {
           windowMs: 60 * 60 * 1000,
-          maxRequests: 3,
+          maxRequests: 30,
           description: 'Account registrations per hour'
         },
         orders: {
           windowMs: 60 * 1000,
-          maxRequests: 10,
+          maxRequests: 100,
           description: 'Order creations per minute'
         },
         payments: {
           windowMs: 60 * 1000,
-          maxRequests: 5,
+          maxRequests: 50,
           description: 'Payment attempts per minute'
         }
       }

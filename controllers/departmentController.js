@@ -1,14 +1,17 @@
 const Department = require('../models/Department');
 const User = require('../models/User');
 const Role = require('../models/Role');
-const AuditLog = require('../models/AuditLog');
 
+// Create department
 const createDepartment = async (req, res) => {
   try {
-    const { name, description, roles, users } = req.body;
+    const { name, description, roles = [] } = req.body;
 
     // Check if department already exists
-    const existingDept = await Department.findOne({ name });
+    const existingDept = await Department.findOne({ 
+      name: name.trim() 
+    });
+    
     if (existingDept) {
       return res.status(400).json({
         success: false,
@@ -16,18 +19,33 @@ const createDepartment = async (req, res) => {
       });
     }
 
+    // Validate roles exist
+    if (roles.length > 0) {
+      const validRoles = await Role.find({ 
+        _id: { $in: roles },
+        isActive: true 
+      });
+      
+      if (validRoles.length !== roles.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'One or more roles are invalid'
+        });
+      }
+    }
+
     const department = new Department({
-      name,
-      description,
-      roles: roles || [],
-      users: users || [],
+      name: name.trim(),
+      description: description?.trim(),
+      roles,
+      users: [],
       createdBy: req.user.id
     });
 
     await department.save();
 
-    // Log the action
-    await AuditLog.create({
+    // Audit log
+    await require('../models/AuditLog').create({
       userId: req.user.id,
       action: 'create_department',
       resource: 'departments',
@@ -38,7 +56,7 @@ const createDepartment = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Department created successfully',
-      data: await department.populate(['roles', 'users', 'createdBy'])
+      data: await department.populate('roles', 'name description')
     });
   } catch (error) {
     res.status(500).json({
@@ -49,18 +67,17 @@ const createDepartment = async (req, res) => {
   }
 };
 
+// Get all departments
 const getDepartments = async (req, res) => {
   try {
-    const { isActive } = req.query;
+    const { includeUsers, includeRoles } = req.query;
     
-    let query = {};
-    if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
-    }
+    let populateFields = [];
+    if (includeUsers === 'true') populateFields.push('users');
+    if (includeRoles === 'true') populateFields.push('roles');
 
-    const departments = await Department.find(query)
-      .populate('roles', 'name description')
-      .populate('users', 'name email role')
+    const departments = await Department.find({ isActive: true })
+      .populate(populateFields)
       .populate('createdBy', 'name email')
       .sort({ name: 1 });
 
@@ -78,12 +95,13 @@ const getDepartments = async (req, res) => {
   }
 };
 
+// Get department by ID
 const getDepartmentById = async (req, res) => {
   try {
     const department = await Department.findById(req.params.id)
-      .populate('roles')
-      .populate('users')
-      .populate('createdBy');
+      .populate('roles', 'name description permissions')
+      .populate('users', 'name email role')
+      .populate('createdBy', 'name email');
 
     if (!department) {
       return res.status(404).json({
@@ -105,9 +123,10 @@ const getDepartmentById = async (req, res) => {
   }
 };
 
+// Update department
 const updateDepartment = async (req, res) => {
   try {
-    const { name, description, roles, users, isActive } = req.body;
+    const { name, description, roles, isActive } = req.body;
 
     const department = await Department.findById(req.params.id);
     if (!department) {
@@ -120,16 +139,29 @@ const updateDepartment = async (req, res) => {
     const previousState = { ...department.toObject() };
 
     // Update fields
-    if (name) department.name = name;
-    if (description) department.description = description;
-    if (roles) department.roles = roles;
-    if (users) department.users = users;
+    if (name) department.name = name.trim();
+    if (description) department.description = description.trim();
+    if (roles) {
+      // Validate roles
+      const validRoles = await Role.find({ 
+        _id: { $in: roles },
+        isActive: true 
+      });
+      
+      if (validRoles.length !== roles.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'One or more roles are invalid'
+        });
+      }
+      department.roles = roles;
+    }
     if (isActive !== undefined) department.isActive = isActive;
 
     await department.save();
 
-    // Log the action
-    await AuditLog.create({
+    // Audit log
+    await require('../models/AuditLog').create({
       userId: req.user.id,
       action: 'update_department',
       resource: 'departments',
@@ -141,7 +173,7 @@ const updateDepartment = async (req, res) => {
     res.json({
       success: true,
       message: 'Department updated successfully',
-      data: await department.populate(['roles', 'users'])
+      data: await department.populate('roles', 'name description')
     });
   } catch (error) {
     res.status(500).json({
@@ -152,6 +184,7 @@ const updateDepartment = async (req, res) => {
   }
 };
 
+// Assign user to department
 const assignUserToDepartment = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -183,19 +216,23 @@ const assignUserToDepartment = async (req, res) => {
     department.users.push(userId);
     await department.save();
 
-    // Log the action
-    await AuditLog.create({
+    // Update user's department reference
+    user.department = department._id;
+    await user.save();
+
+    // Audit log
+    await require('../models/AuditLog').create({
       userId: req.user.id,
       action: 'assign_user_department',
       resource: 'departments',
       resourceId: department._id,
-      newState: { assignedUser: userId }
+      newState: { assignedUser: userId, department: department._id }
     });
 
     res.json({
       success: true,
       message: 'User assigned to department successfully',
-      data: await department.populate('users')
+      data: await department.populate('users', 'name email role')
     });
   } catch (error) {
     res.status(500).json({
@@ -206,7 +243,7 @@ const assignUserToDepartment = async (req, res) => {
   }
 };
 
-// Add this missing function
+// Remove user from department
 const removeUserFromDepartment = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -230,8 +267,11 @@ const removeUserFromDepartment = async (req, res) => {
     department.users = department.users.filter(id => id.toString() !== userId);
     await department.save();
 
-    // Log the action
-    await AuditLog.create({
+    // Remove department reference from user
+    await User.findByIdAndUpdate(userId, { department: null });
+
+    // Audit log
+    await require('../models/AuditLog').create({
       userId: req.user.id,
       action: 'remove_user_department',
       resource: 'departments',
@@ -242,12 +282,85 @@ const removeUserFromDepartment = async (req, res) => {
     res.json({
       success: true,
       message: 'User removed from department successfully',
-      data: await department.populate('users')
+      data: await department.populate('users', 'name email role')
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Error removing user from department',
+      error: error.message
+    });
+  }
+};
+
+// Get department users
+const getDepartmentUsers = async (req, res) => {
+  try {
+    const department = await Department.findById(req.params.id)
+      .populate('users', 'name email role phone isActive');
+
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: department.users,
+      count: department.users.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching department users',
+      error: error.message
+    });
+  }
+};
+
+// Delete department (soft delete)
+const deleteDepartment = async (req, res) => {
+  try {
+    const department = await Department.findById(req.params.id);
+    
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found'
+      });
+    }
+
+    // Check if department has users
+    if (department.users.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete department. It has ${department.users.length} user(s) assigned.`
+      });
+    }
+
+    // Soft delete
+    department.isActive = false;
+    await department.save();
+
+    // Audit log
+    await require('../models/AuditLog').create({
+      userId: req.user.id,
+      action: 'delete_department',
+      resource: 'departments',
+      resourceId: department._id,
+      newState: { isActive: false }
+    });
+
+    res.json({
+      success: true,
+      message: 'Department deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting department',
       error: error.message
     });
   }
@@ -259,5 +372,7 @@ module.exports = {
   getDepartmentById,
   updateDepartment,
   assignUserToDepartment,
-  removeUserFromDepartment
+  removeUserFromDepartment,
+  getDepartmentUsers,
+  deleteDepartment
 };

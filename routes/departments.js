@@ -5,7 +5,9 @@ const {
   getDepartmentById,
   updateDepartment,
   assignUserToDepartment,
-  removeUserFromDepartment
+  removeUserFromDepartment,
+  getDepartmentUsers,
+  deleteDepartment
 } = require('../controllers/departmentController');
 const auth = require('../middleware/auth');
 const { checkPermission } = require('../middleware/rbac');
@@ -27,5 +29,7 @@ router.get('/:id', departmentIdValidator, handleValidationErrors, checkPermissio
 router.put('/:id', departmentIdValidator, handleValidationErrors, updateDepartmentValidator, handleValidationErrors, checkPermission('departments', 'update'), updateDepartment);
 router.post('/:id/assign-user', departmentIdValidator, handleValidationErrors, assignUserValidator, handleValidationErrors, checkPermission('departments', 'update'), assignUserToDepartment);
 router.post('/:id/remove-user', departmentIdValidator, handleValidationErrors, assignUserValidator, handleValidationErrors, checkPermission('departments', 'update'), removeUserFromDepartment);
+router.get('/:id/users', departmentIdValidator, handleValidationErrors, checkPermission('departments', 'read'), getDepartmentUsers);
+router.delete('/:id', departmentIdValidator, handleValidationErrors, checkPermission('departments', 'delete'), deleteDepartment);
 
 module.exports = router;
