@@ -7,57 +7,92 @@ const createDepartment = async (req, res) => {
   try {
     const { name, description, roles = [] } = req.body;
 
-    // Check if department already exists
+    // Check if department already exists - NO ERROR, just return existing department
     const existingDept = await Department.findOne({ 
       name: name.trim() 
-    });
+    }).populate('roles', 'name description');
     
     if (existingDept) {
-      return res.status(400).json({
-        success: false,
-        message: 'Department with this name already exists'
+      return res.json({
+        success: true,
+        message: 'Department already exists',
+        data: existingDept
       });
     }
 
-    // Validate roles exist
+    // Validate roles exist by NAME instead of ID
     if (roles.length > 0) {
       const validRoles = await Role.find({ 
-        _id: { $in: roles },
+        name: { $in: roles },
         isActive: true 
       });
       
       if (validRoles.length !== roles.length) {
+        const invalidRoles = roles.filter(roleName => 
+          !validRoles.some(validRole => validRole.name === roleName)
+        );
+        
         return res.status(400).json({
           success: false,
-          message: 'One or more roles are invalid'
+          message: 'One or more roles are invalid',
+          invalidRoles: invalidRoles
         });
       }
+
+      // Get role IDs for saving to department
+      const roleIds = validRoles.map(role => role._id);
+      
+      const department = new Department({
+        name: name.trim(),
+        description: description?.trim(),
+        roles: roleIds, // Store role IDs in database
+        users: [],
+        createdBy: req.user.id
+      });
+
+      await department.save();
+
+      // Audit log
+      await require('../models/AuditLog').create({
+        userId: req.user.id,
+        action: 'create_department',
+        resource: 'departments',
+        resourceId: department._id,
+        newState: department
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Department created successfully',
+        data: await department.populate('roles', 'name description')
+      });
+    } else {
+      // No roles provided, create department without roles
+      const department = new Department({
+        name: name.trim(),
+        description: description?.trim(),
+        roles: [],
+        users: [],
+        createdBy: req.user.id
+      });
+
+      await department.save();
+
+      // Audit log
+      await require('../models/AuditLog').create({
+        userId: req.user.id,
+        action: 'create_department',
+        resource: 'departments',
+        resourceId: department._id,
+        newState: department
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Department created successfully',
+        data: await department.populate('roles', 'name description')
+      });
     }
-
-    const department = new Department({
-      name: name.trim(),
-      description: description?.trim(),
-      roles,
-      users: [],
-      createdBy: req.user.id
-    });
-
-    await department.save();
-
-    // Audit log
-    await require('../models/AuditLog').create({
-      userId: req.user.id,
-      action: 'create_department',
-      resource: 'departments',
-      resourceId: department._id,
-      newState: department
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Department created successfully',
-      data: await department.populate('roles', 'name description')
-    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -141,21 +176,31 @@ const updateDepartment = async (req, res) => {
     // Update fields
     if (name) department.name = name.trim();
     if (description) department.description = description.trim();
+    
+    // Handle roles by NAME
     if (roles) {
-      // Validate roles
+      // Validate roles by name
       const validRoles = await Role.find({ 
-        _id: { $in: roles },
+        name: { $in: roles },
         isActive: true 
       });
       
       if (validRoles.length !== roles.length) {
+        const invalidRoles = roles.filter(roleName => 
+          !validRoles.some(validRole => validRole.name === roleName)
+        );
+        
         return res.status(400).json({
           success: false,
-          message: 'One or more roles are invalid'
+          message: 'One or more roles are invalid',
+          invalidRoles: invalidRoles
         });
       }
-      department.roles = roles;
+      
+      // Convert role names to IDs for storage
+      department.roles = validRoles.map(role => role._id);
     }
+    
     if (isActive !== undefined) department.isActive = isActive;
 
     await department.save();
@@ -179,6 +224,96 @@ const updateDepartment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating department',
+      error: error.message
+    });
+  }
+};
+
+// Add roles to department by NAME
+const addRolesToDepartment = async (req, res) => {
+  try {
+    const { roles } = req.body;
+
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Roles array is required and cannot be empty'
+      });
+    }
+
+    const department = await Department.findById(req.params.id);
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found'
+      });
+    }
+
+    // Validate roles exist by NAME and are active
+    const validRoles = await Role.find({ 
+      name: { $in: roles },
+      isActive: true 
+    });
+    
+    if (validRoles.length !== roles.length) {
+      const invalidRoles = roles.filter(roleName => 
+        !validRoles.some(validRole => validRole.name === roleName)
+      );
+      
+      return res.status(400).json({
+        success: false,
+        message: 'One or more roles are invalid or inactive',
+        invalidRoles: invalidRoles
+      });
+    }
+
+    const previousRoles = [...department.roles];
+    const validRoleIds = validRoles.map(role => role._id);
+
+    // Add new roles (avoid duplicates)
+    const newRoles = [...new Set([...department.roles.map(id => id.toString()), ...validRoleIds.map(id => id.toString())])];
+    
+    // Check if any roles were actually added
+    if (newRoles.length === department.roles.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'All specified roles are already assigned to this department'
+      });
+    }
+
+    department.roles = newRoles;
+    await department.save();
+
+    // Get the newly added roles for audit log
+    const addedRoles = validRoles.filter(role => 
+      !previousRoles.some(prevRoleId => prevRoleId.toString() === role._id.toString())
+    );
+
+    // Audit log
+    await require('../models/AuditLog').create({
+      userId: req.user.id,
+      action: 'add_roles_department',
+      resource: 'departments',
+      resourceId: department._id,
+      previousState: { roles: previousRoles },
+      newState: { 
+        roles: department.roles,
+        addedRoles: addedRoles.map(role => role.name)
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully added ${addedRoles.length} role(s) to department`,
+      data: {
+        department: await department.populate('roles', 'name description'),
+        addedRoles: addedRoles.map(role => ({ name: role.name, description: role.description }))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error adding roles to department',
       error: error.message
     });
   }
@@ -371,6 +506,7 @@ module.exports = {
   getDepartments,
   getDepartmentById,
   updateDepartment,
+  addRolesToDepartment,
   assignUserToDepartment,
   removeUserFromDepartment,
   getDepartmentUsers,

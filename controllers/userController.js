@@ -24,24 +24,11 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Validate role exists
-    /*
-    const roleExists = await Role.findOne({ 
-      name: role,
-      isActive: true 
-    });
-    
-    if (!roleExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role specified'
-      });
-    }
-*/
-    // Validate department if provided
+    // Validate department if provided by NAME
+    let departmentId = null;
     if (department) {
       const departmentExists = await Department.findOne({
-        _id: department,
+        name: department.trim(),
         isActive: true
       });
       
@@ -51,6 +38,7 @@ const createUser = async (req, res) => {
           message: 'Invalid department specified'
         });
       }
+      departmentId = departmentExists._id;
     }
 
     const user = new User({
@@ -58,7 +46,7 @@ const createUser = async (req, res) => {
       email: email.toLowerCase().trim(),
       password,
       role,
-      department: department || null,
+      department: departmentId, // Store department ID in database
       phone: phone?.trim(),
       assignedRegions: assignedRegions || [],
       assignedMachines: assignedMachines || []
@@ -67,9 +55,9 @@ const createUser = async (req, res) => {
     await user.save();
 
     // If department is provided, add user to department
-    if (department) {
+    if (departmentId) {
       await Department.findByIdAndUpdate(
-        department,
+        departmentId,
         { $addToSet: { users: user._id } }
       );
     }
@@ -84,7 +72,7 @@ const createUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: department // Log department name
       }
     });
 
@@ -96,7 +84,7 @@ const createUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department,
+        department: department, // Return department name in response
         phone: user.phone,
         isActive: user.isActive,
         createdAt: user.createdAt
@@ -118,7 +106,13 @@ const getAllUsers = async (req, res) => {
     const { department, role, isActive } = req.query;
     
     let query = {};
-    if (department) query.department = department;
+    if (department) {
+      // Find department by name and use its ID in query
+      const dept = await Department.findOne({ name: department, isActive: true });
+      if (dept) {
+        query.department = dept._id;
+      }
+    }
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
 
@@ -127,10 +121,16 @@ const getAllUsers = async (req, res) => {
       .populate('department', 'name')
       .sort({ createdAt: -1 });
 
+    // Transform response to include department name instead of object
+    const transformedUsers = users.map(user => ({
+      ...user.toObject(),
+      department: user.department ? user.department.name : null
+    }));
+
     res.json({
       success: true,
-      data: users,
-      count: users.length
+      data: transformedUsers,
+      count: transformedUsers.length
     });
   } catch (error) {
     res.status(500).json({
@@ -155,9 +155,15 @@ const getUserById = async (req, res) => {
       });
     }
 
+    // Transform response to include department name
+    const userData = {
+      ...user.toObject(),
+      department: user.department ? user.department.name : null
+    };
+
     res.json({
       success: true,
-      data: user
+      data: userData
     });
   } catch (error) {
     res.status(500).json({
@@ -171,7 +177,7 @@ const getUserById = async (req, res) => {
 // Update user
 const updateUser = async (req, res) => {
   try {
-    const { name, email, phone, assignedRegions, assignedMachines } = req.body;
+    const { name, email, phone, department, assignedRegions, assignedMachines } = req.body;
 
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -185,6 +191,7 @@ const updateUser = async (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      department: user.department,
       assignedRegions: user.assignedRegions,
       assignedMachines: user.assignedMachines
     };
@@ -207,10 +214,59 @@ const updateUser = async (req, res) => {
       user.email = email.toLowerCase().trim();
     }
     if (phone !== undefined) user.phone = phone?.trim();
+    
+    // Handle department by NAME
+    if (department !== undefined) {
+      if (department) {
+        const departmentExists = await Department.findOne({
+          name: department.trim(),
+          isActive: true
+        });
+        
+        if (!departmentExists) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid department specified'
+          });
+        }
+        
+        // Remove from old department
+        if (user.department) {
+          await Department.findByIdAndUpdate(
+            user.department,
+            { $pull: { users: user._id } }
+          );
+        }
+
+        // Add to new department
+        user.department = departmentExists._id;
+        await Department.findByIdAndUpdate(
+          departmentExists._id,
+          { $addToSet: { users: user._id } }
+        );
+      } else {
+        // Remove from department
+        if (user.department) {
+          await Department.findByIdAndUpdate(
+            user.department,
+            { $pull: { users: user._id } }
+          );
+        }
+        user.department = null;
+      }
+    }
+    
     if (assignedRegions !== undefined) user.assignedRegions = assignedRegions;
     if (assignedMachines !== undefined) user.assignedMachines = assignedMachines;
 
     await user.save();
+
+    // Get department name for audit log
+    let departmentName = null;
+    if (user.department) {
+      const dept = await Department.findById(user.department);
+      departmentName = dept ? dept.name : null;
+    }
 
     // Audit log
     await require('../models/AuditLog').create({
@@ -223,15 +279,21 @@ const updateUser = async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        department: departmentName,
         assignedRegions: user.assignedRegions,
         assignedMachines: user.assignedMachines
       }
     });
 
+    const updatedUser = await User.findById(user._id).populate('department', 'name');
+    
     res.json({
       success: true,
       message: 'User updated successfully',
-      data: await user.populate('department', 'name')
+      data: {
+        ...updatedUser.toObject(),
+        department: updatedUser.department ? updatedUser.department.name : null
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -276,12 +338,12 @@ const updateUserRoleAndDepartment = async (req, res) => {
       user.role = role;
     }
 
-    // Handle department change
+    // Handle department change by NAME
     if (department !== undefined) {
       if (department) {
-        // Validate new department
+        // Validate new department by NAME
         const departmentExists = await Department.findOne({
-          _id: department,
+          name: department.trim(),
           isActive: true
         });
         
@@ -301,9 +363,9 @@ const updateUserRoleAndDepartment = async (req, res) => {
         }
 
         // Add to new department
-        user.department = department;
+        user.department = departmentExists._id;
         await Department.findByIdAndUpdate(
-          department,
+          departmentExists._id,
           { $addToSet: { users: user._id } }
         );
       } else {
@@ -320,6 +382,13 @@ const updateUserRoleAndDepartment = async (req, res) => {
 
     await user.save();
 
+    // Get department name for audit log
+    let departmentName = null;
+    if (user.department) {
+      const dept = await Department.findById(user.department);
+      departmentName = dept ? dept.name : null;
+    }
+
     // Audit log
     await require('../models/AuditLog').create({
       userId: req.user.id,
@@ -329,14 +398,19 @@ const updateUserRoleAndDepartment = async (req, res) => {
       previousState,
       newState: {
         role: user.role,
-        department: user.department
+        department: departmentName
       }
     });
 
+    const updatedUser = await User.findById(user._id).populate('department', 'name');
+    
     res.json({
       success: true,
       message: 'User updated successfully',
-      data: await user.populate('department', 'name')
+      data: {
+        ...updatedUser.toObject(),
+        department: updatedUser.department ? updatedUser.department.name : null
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -350,7 +424,7 @@ const updateUserRoleAndDepartment = async (req, res) => {
 // Get user permissions
 const getUserPermissions = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id).select('-password').populate('department', 'name');
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -368,7 +442,7 @@ const getUserPermissions = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          department: user.department
+          department: user.department ? user.department.name : null
         },
         permissions: role?.permissions || [],
         systemInterface: role?.systemInterface || []
@@ -392,7 +466,7 @@ const updateUserStatus = async (req, res) => {
       req.params.id,
       { isActive },
       { new: true }
-    ).select('-password');
+    ).select('-password').populate('department', 'name');
 
     if (!user) {
       return res.status(404).json({
@@ -413,7 +487,10 @@ const updateUserStatus = async (req, res) => {
     res.json({
       success: true,
       message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      data: user
+      data: {
+        ...user.toObject(),
+        department: user.department ? user.department.name : null
+      }
     });
   } catch (error) {
     res.status(500).json({

@@ -26,7 +26,7 @@ const getAllRoles = async (req, res) => {
   }
 };
 
-// Create custom role
+// Create custom role or use existing role
 const createCustomRole = async (req, res) => {
   try {
     const { name, description, permissions = [], systemInterface = ['admin_panel'] } = req.body;
@@ -39,24 +39,30 @@ const createCustomRole = async (req, res) => {
       });
     }
 
+    const normalizedName = name.toLowerCase().trim();
+
     // Check if role already exists
-    const existingRole = await Role.findOne({ 
-      name: name.toLowerCase().trim() 
+    let role = await Role.findOne({ 
+      name: normalizedName 
     });
     
-    if (existingRole) {
-      return res.status(400).json({
-        success: false,
-        message: 'Role with this name already exists'
+    if (role) {
+      // Role already exists - return the existing role without error
+      return res.json({
+        success: true,
+        message: 'Role already exists',
+        data: role,
+        action: 'existing'
       });
     }
 
-    const role = new Role({
-      name: name.toLowerCase().trim(),
+    // Create new role
+    role = new Role({
+      name: normalizedName,
       description: description?.trim() || `Custom role: ${name}`,
       permissions,
       systemInterface,
-      isSystem: predefinedRoles.includes(name.toLowerCase()),
+      isSystem: predefinedRoles.includes(normalizedName),
       isActive: true
     });
 
@@ -74,7 +80,8 @@ const createCustomRole = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Role created successfully',
-      data: role
+      data: role,
+      action: 'created'
     });
   } catch (error) {
     res.status(500).json({
